@@ -1,0 +1,126 @@
+<?PHP
+    include 'dbconfig.php';
+    $no = (isset($_GET['no']) 
+        && $_GET['no'] != '' 
+        && is_numeric($_GET['no']))
+        ? $_GET['no'] : '';
+    if( $no == ''){
+        exit('비정상적인 접근을 허용하지 않습니다.');
+    }
+
+    $sql = "SELECT * FROM board WHERE no=:no";
+    $stmt = $conn -> prepare($sql);
+    $stmt -> bindParam(':no', $no);
+    $stmt -> setFetchMode(PDO::FETCH_ASSOC);
+    $stmt -> execute();
+    
+    $row = $stmt -> fetch();
+
+?>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>view</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <style>
+        #bbs_content img{
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <input id="no" hidden value="<?= $row['no']; ?>">
+    <div class="container mt-3 w-50 vstack" data-no="<?= $row['no']; ?>">
+        <h1>게시판</h1>
+    </div>
+    <div class="container my-3 border boarder-1 w-50">
+        <div class="p-3">
+            <span class="h3 fw-bolder">
+                <?= $row['title']; ?> 
+            </span>
+        </div>
+        <div class="d-flex px-3 border border-top-0 border-start-0 
+            border-end-0 border-botton-1">
+            <span class="ms-5">작성자 : <?= $row['author']; ?> </span> 
+        </div>
+        <div class="p-3" id="bbs_content">
+            <?= $row['content']; ?> 
+        </div>
+
+        <div class="d-flex gap-2 p-3">
+            <button class="btn btn-secondary" id="btn_list">목록</button>
+            <button class="btn btn-primary ms-auto" id="btn_modify">수정</button>
+            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modal" id="btn_delete">삭제</button>
+        </div>
+    </div>
+    <!-- 공용 모달 -->
+    <div class="modal" id="modal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Modal title</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-footer">
+              <button type="button" id="modal-cancel" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" id="modal-ok" class="btn btn-primary">Save changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <script>
+        const btn_list = document.querySelector("#btn_list");
+        btn_list.addEventListener("click", () =>{
+            self.location.href='./list.html'
+        })
+
+        const btn_modify = document.querySelector("#btn_modify");
+        btn_modify.addEventListener("click", () =>{
+            self.location.href='./modify.html?no='
+                +document.querySelector("#no").value;
+        })
+
+        const btn_delete = document.querySelector("#btn_delete");
+        btn_delete.addEventListener("click", () => {
+            const modal_title = document.querySelector(".modal-title");
+            modal_title.textContent = "삭제하기";
+            const modal_button1 = document.querySelector("#modal-cancel");
+            modal_button1.innerHTML="취소";
+            const modal_button2 = document.querySelector("#modal-ok");
+            modal_button2.innerHTML="삭제";
+            modal_button2.addEventListener("click",() => {
+
+                const formData = new FormData();
+                formData.append('no', document.querySelector("#no").value);
+
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST","./delete.php","true");
+                xhr.send(formData);
+                modal_button2.disabled = true;
+                xhr.onload = () => {
+                    if(xhr.status == 200){
+                        console.log(xhr.responseText);
+                        const data = JSON.parse(xhr.responseText);
+                        if(data.result == 'success'){
+                        alert('글이 성공적으로 삭제되었습니다.');
+                        self.location.href='./list.html';
+                        }
+                        else{
+                        alert('글삭제가 실패하였습니다.');
+                        }
+                    }else{
+                        alert(xhr.status);
+                        alert('통신 실패');
+                    }
+                }                
+            })
+        })
+
+    </script>
+   
+</body>
+</html>
